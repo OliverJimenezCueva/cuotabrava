@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cuotabrava | pronósticos & analytics</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Icons FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cb: {
+                            bg: '#0B0F14',          // Fondo principal
+                            card: '#151B23',        // Tarjetas
+                            subcard: '#1D2630',     // Tarjetas secundarias
+                            lime: '#B6F500',        // Verde principal lima
+                            white: '#F5F7FA',       // Texto principal
+                            gray: '#9CA3AF',        // Texto secundario
+                            win: '#22C55E',         // Acertado
+                            lose: '#EF4444',        // Fallado
+                            pending: '#FACC15'      // Pendiente
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                        display: ['"Space Grotesk"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B0F14;
+            color: #F5F7FA;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .card-main {
+            background-color: #151B23;
+            border: 1px solid #1D2630;
+            border-radius: 16px;
+        }
+
+        .card-sub {
+            background-color: #1D2630;
+            border-radius: 12px;
+        }
+
+        .pill-category {
+            background-color: #151B23;
+            border: 1px solid #1D2630;
+            transition: all 0.2s ease;
+        }
+        .pill-category:hover, .pill-category.active {
+            background-color: #B6F500;
+            color: #0B0F14;
+            border-color: #B6F500;
+        }
+
+        .btn-lime {
+            background-color: #B6F500;
+            color: #0B0F14;
+            font-weight: 800;
+        }
+        .btn-lime:hover {
+            opacity: 0.9;
+        }
+
+        /* EFECTO TELÓN DE APERTURA */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background-color: #0B0F14;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+        #splash-screen.slide-up {
+            transform: translateY(-100%);
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar { height: 4px; width: 4px; }
+        ::-webkit-scrollbar-track { background: #0B0F14; }
+        ::-webkit-scrollbar-thumb { background: #1D2630; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #B6F500; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- EFECTO TELÓN DE APERTURA -->
+    <div id="splash-screen">
+        <div class="text-center space-y-3">
+            <div class="w-16 h-16 rounded-2xl bg-[#B6F500] text-[#0B0F14] flex items-center justify-center font-black text-3xl mx-auto shadow-2xl shadow-[#B6F500]/30 animate-bounce">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <h1 class="font-display text-4xl sm:text-5xl font-black tracking-tight text-[#F5F7FA] lowercase">
+                cuotabrava<span class="text-[#B6F500]">.</span>
+            </h1>
+            <p class="text-xs text-[#9CA3AF] tracking-widest uppercase font-mono">Cargando plataforma profesional...</p>
+        </div>
+    </div>
+
+    <!-- TOP HEADER RESPONSIVE -->
+    <header class="bg-[#151B23] border-b border-[#1D2630] sticky top-0 z-40">
+        <div class="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            
+            <!-- BRANDING -->
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-[#B6F500] text-[#0B0F14] flex items-center justify-center font-black text-lg">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <span class="font-display text-xl sm:text-2xl font-black tracking-tight text-[#F5F7FA] lowercase">
+                    cuotabrava<span class="text-[#B6F500]">.</span>
+                </span>
+            </div>
+
+            <!-- NAVEGACIÓN MÓVIL Y ESCRITORIO -->
+            <nav class="flex items-center gap-1 bg-[#0B0F14] p-1 rounded-xl border border-[#1D2630]">
+                <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold transition bg-[#B6F500] text-[#0B0F14]">
+                    <i class="fa-solid fa-gauge-high mr-1"></i> <span class="hidden xs:inline">Picks</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="nav-btn-analytics" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold text-[#9CA3AF] hover:text-[#F5F7FA] transition">
+                    <i class="fa-solid fa-chart-pie mr-1"></i> <span class="hidden xs:inline">Analytics</span>
+                </button>
+            </nav>
+
+            <!-- TELEGRAM BUTTON -->
+            <div class="flex items-center">
+                <a href="https://telegram.org" target="_blank" class="btn-lime px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md">
+                    <i class="fa-brands fa-telegram text-sm"></i>
+                    <span class="hidden sm:inline">Telegram</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ANUNCIO GOOGLE ADSENSE 1 (SUPERIOR) -->
+    <div class="max-w-[1400px] mx-auto px-4 mt-4 w-full">
+        <div class="card-main p-3 border border-[#B6F500]/20">
+            <div class="text-[9px] text-[#9CA3AF] uppercase tracking-widest mb-1 flex items-center justify-between font-semibold">
+                <span>Anuncio Google AdSense (Banner Superior)</span>
+                <span class="text-[#B6F500] font-mono">Monetización Activa</span>
+            </div>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#1D2630] p-3 rounded-xl border border-[#1D2630]">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[#B6F500]/20 text-[#B6F500] flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-[#F5F7FA] text-xs">Hosting Cloud SSD Ultra Rápido</div>
+                        <div class="text-[#9CA3AF] text-[11px]">Servidores administrados desde 4.99€/mes con soporte 24/7.</div>
+                    </div>
+                </div>
+                <button class="btn-lime px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Contratar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-[1400px] mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+        <!-- ========================================== -->
+        <!-- VISTA 1: DASHBOARD PRINCIPAL -->
+        <!-- ========================================== -->
+        <div id="view-dashboard" class="space-y-6">
+            
+            <!-- CATEGORÍAS SCROLLABLE -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <button onclick="filterSport('all')" id="cat-all" class="pill-category active px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-amber-400"></i> Todos
+                </button>
+                <button onclick="filterSport('futbol')" id="cat-futbol" class="pill-category text-[#F5F7FA] px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-2">
+                    <i class="fa-regular fa-futbol text-emerald-400"></i> Fútbol
+                </button>
+                <button onclick="filterSport('tenis')" id="cat-tenis" class="pill-category text-[#F5F7FA] px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-2">
+                    <i class="fa-solid fa-baseball text-amber-400"></i> Tenis
+                </button>
+                <button onclick="filterSport('baloncesto')" id="cat-baloncesto" class="pill-category text-[#F5F7FA] px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-2">
+                    <i class="fa-solid fa-basketball text-orange-400"></i> Baloncesto
+                </button>
+            </div>
+
+            <!-- GRID PRINCIPAL DE TRES COLUMNAS -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- COLUMNA IZQUIERDA (BALANCE Y ANUNCIO ADDSENSE 2) -->
+                <div class="lg:col-span-3 space-y-4">
+                    
+                    <!-- BALANCE NETO -->
+                    <div class="card-main p-4 space-y-3">
+                        <div class="flex items-center justify-between text-xs text-[#9CA3AF] font-semibold">
+                            <span>BALANCE NETO</span>
+                            <span class="text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded font-mono">+18.4%</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-[#B6F500] text-[#0B0F14] flex items-center justify-center font-black text-lg">
+                                €
+                            </div>
+                            <div>
+                                <div id="dash-profit-val" class="text-2xl font-display font-extrabold text-[#F5F7FA] font-mono">+1.840 €</div>
+                                <div class="text-[10px] text-[#9CA3AF]">Beneficio acumulado</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-1 pt-2 border-t border-[#1D2630] text-center text-xs">
+                            <div>
+                                <span class="text-[#9CA3AF] text-[9px] uppercase block">Picks</span>
+                                <span id="dash-total-picks" class="font-bold text-[#F5F7FA] font-mono">124</span>
+                            </div>
+                            <div>
+                                <span class="text-[#22C55E] text-[9px] uppercase block">Aciertos</span>
+                                <span id="dash-wins-count" class="font-bold text-[#22C55E] font-mono">94</span>
+                            </div>
+                            <div>
+                                <span class="text-[#EF4444] text-[9px] uppercase block">Fallos</span>
+                                <span id="dash-losses-count" class="font-bold text-[#EF4444] font-mono">30</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ANUNCIO GOOGLE ADSENSE 2 (LATERAL IZQUIERDO) -->
+                    <div class="card-main p-4 text-center border border-[#B6F500]/20">
+                        <span class="text-[9px] text-[#9CA3AF] uppercase tracking-widest block mb-2 font-semibold">Anuncio AdSense (Patrocinador)</span>
+                        <div class="card-sub p-3.5 space-y-2.5">
+                            <i class="fa-solid fa-graduation-cap text-2xl text-[#B6F500]"></i>
+                            <div class="text-xs font-bold text-[#F5F7FA]">Cursos de Programación Web</div>
+                            <div class="text-[10px] text-[#9CA3AF]">Aprende a crear plataformas desde cero a tu ritmo.</div>
+                            <button class="w-full btn-lime py-1.5 rounded-lg text-xs">Ver Catálogo</button>
+                        </div>
+                    </div>
+
+                    <!-- APUESTA DEL DÍA -->
+                    <div class="card-main p-4 relative overflow-hidden bg-gradient-to-br from-[#151B23] to-[#1D2630]">
+                        <div class="flex items-center justify-between text-xs mb-2">
+                            <span class="text-[#B6F500] font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
+                                <i class="fa-solid fa-star"></i> APUESTA DESTACADA
+                            </span>
+                            <span class="bg-[#22C55E]/20 text-[#22C55E] font-bold text-[9px] px-2 py-0.5 rounded">VALUE</span>
+                        </div>
+                        <h4 class="font-bold text-[#F5F7FA] text-sm mb-1">Champions Special</h4>
+                        <p class="text-xs text-[#9CA3AF] mb-3">Real Madrid vs Man City • Ambos Marcan</p>
+                        <div class="flex items-center justify-between bg-[#0B0F14] p-2.5 rounded-xl border border-[#1D2630]">
+                            <span class="text-xs text-[#9CA3AF]">Cuota</span>
+                            <span class="text-base font-display font-bold text-[#B6F500] font-mono">1.95</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA CENTRAL (FEED DE PRONÓSTICOS CON ANUNCIO ADJUNTO) -->
+                <div class="lg:col-span-6 space-y-4">
+                    
+                    <!-- BOTÓN ADMIN Y FILTRO -->
+                    <div class="flex items-center justify-between card-main p-3">
+                        <span class="text-xs font-bold text-[#F5F7FA] flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-[#B6F500]"></i> Pronósticos del Día
+                        </span>
+                        <button id="btn-create-pick" onclick="openCreatePickModal()" class="hidden btn-lime px-3.5 py-1.5 rounded-xl text-xs shadow-md">
+                            + Nuevo
+                        </button>
+                    </div>
+
+                    <!-- LISTA DE TARJETAS DE PRONÓSTICOS -->
+                    <div id="picks-container" class="space-y-4">
+                        <!-- JS inyecta las tarjetas aquí -->
+                    </div>
+
+                    <!-- ANUNCIO GOOGLE ADSENSE 3 (INTERMEDIO EN EL FEED) -->
+                    <div class="card-main p-3.5 border border-dashed border-[#B6F500]/30 bg-[#151B23]/60">
+                        <div class="text-[9px] text-[#9CA3AF] uppercase tracking-widest mb-1.5 flex items-center justify-between font-semibold">
+                            <span>Google AdSense (Native Feed Ad)</span>
+                            <span class="text-[#22C55E]">Patrocinado</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 bg-[#0B0F14] p-3 rounded-xl border border-[#1D2630]">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-sm">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-[#F5F7FA] text-xs">VPN Premium con Cifrado Militar</div>
+                                    <div class="text-[#9CA3AF] text-[10px]">Navega de forma anónima y segura en cualquier red pública.</div>
+                                </div>
+                            </div>
+                            <button class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Instalar</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA DERECHA (TELEGRAM, ANUNCIO ADDSENSE 4 Y LEGAL) -->
+                <div class="lg:col-span-3 space-y-4">
+                    
+                    <!-- PANEL ADMIN SI ESTÁ ACTIVO -->
+                    <div id="admin-session-bar" class="hidden card-main p-4 border border-[#22C55E]/40 bg-[#22C55E]/5 text-xs space-y-2">
+                        <div class="flex items-center justify-between text-[#22C55E] font-bold">
+                            <span><i class="fa-solid fa-user-shield"></i> Admin Activo</span>
+                            <button onclick="logoutAdmin()" class="text-[#9CA3AF] hover:text-white underline">Salir</button>
+                        </div>
+                        <p class="text-[#9CA3AF]">Modo administración habilitado para gestionar apuestas.</p>
+                    </div>
+
+                    <!-- TELEGRAM -->
+                    <div class="card-main p-5 text-center space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-[#B6F500] text-[#0B0F14] flex items-center justify-center mx-auto text-xl font-black">
+                            <i class="fa-brands fa-telegram"></i>
+                        </div>
+                        <h4 class="font-bold text-[#F5F7FA] text-sm">Canal VIP Telegram</h4>
+                        <p class="text-xs text-[#9CA3AF]">Avisos instantáneos en el móvil ante cualquier cambio.</p>
+                        <a href="https://telegram.org" target="_blank" class="block w-full btn-lime py-2.5 rounded-xl text-xs">
+                            Unirme Gratis
+                        </a>
+                    </div>
+
+                    <!-- ANUNCIO GOOGLE ADSENSE 4 (LATERAL DERECHO) -->
+                    <div class="card-main p-4 text-center border border-[#B6F500]/20">
+                        <span class="text-[9px] text-[#9CA3AF] uppercase tracking-widest block mb-2 font-semibold">Anuncio AdSense (Display Box)</span>
+                        <div class="card-sub p-4 space-y-2">
+                            <i class="fa-solid fa-car text-2xl text-amber-400"></i>
+                            <div class="text-xs font-bold text-[#F5F7FA]">Compara Seguros de Coche</div>
+                            <div class="text-[10px] text-[#9CA3AF]">Ahorra hasta 200€ al año cambiando de compañía.</div>
+                            <button class="w-full bg-[#1D2630] hover:bg-[#232d42] text-white border border-[#232d42] py-1.5 rounded-lg text-xs font-semibold">Comparar</button>
+                        </div>
+                    </div>
+
+                    <!-- DISCLAIMER -->
+                    <div class="card-main p-3.5 text-[11px] text-[#9CA3AF] space-y-1 border border-[#1D2630]">
+                        <div class="font-bold text-[#F5F7FA] flex items-center gap-1">
+                            <i class="fa-solid fa-shield-halved text-[#B6F500]"></i> Juego Responsable (+18)
+                        </div>
+                        <p class="leading-relaxed">Pronósticos informativos sin garantía de rentabilidad.</p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VISTA 2: ANALYTICS & HISTORIAL CON ANUNCIO -->
+        <!-- ========================================== -->
+        <div id="view-analytics" class="hidden space-y-6">
+            
+            <!-- TARJETAS DE MÉTRICAS -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="card-main p-4 border border-[#1D2630]">
+                    <span class="text-[11px] text-[#9CA3AF] uppercase font-semibold">Yield</span>
+                    <div id="stat-yield" class="text-2xl font-display font-extrabold text-[#B6F500] font-mono mt-1">+18.4%</div>
+                </div>
+                <div class="card-main p-4 border border-[#1D2630]">
+                    <span class="text-[11px] text-[#9CA3AF] uppercase font-semibold">Acierto</span>
+                    <div id="stat-winrate" class="text-2xl font-display font-extrabold text-[#F5F7FA] font-mono mt-1">76.2%</div>
+                </div>
+                <div class="card-main p-4 border border-[#1D2630]">
+                    <span class="text-[11px] text-[#9CA3AF] uppercase font-semibold">Beneficio</span>
+                    <div id="stat-profit" class="text-2xl font-display font-extrabold text-[#22C55E] font-mono mt-1">+1.840 €</div>
+                </div>
+                <div class="card-main p-4 border border-[#1D2630]">
+                    <span class="text-[11px] text-[#9CA3AF] uppercase font-semibold">Cuota Media</span>
+                    <div id="stat-avgodds" class="text-2xl font-display font-extrabold text-[#F5F7FA] font-mono mt-1">1.88</div>
+                </div>
+            </div>
+
+            <!-- ANUNCIO GOOGLE ADSENSE 5 (EN SECCIÓN ANALYTICS) -->
+            <div class="card-main p-3 border border-[#B6F500]/20">
+                <div class="text-[9px] text-[#9CA3AF] uppercase tracking-widest mb-1 flex items-center justify-between font-semibold">
+                    <span>Google AdSense (Analytics Banner)</span>
+                    <span class="text-[#B6F500]">Patrocinado</span>
+                </div>
+                <div class="flex items-center justify-between gap-3 bg-[#1D2630] p-3 rounded-xl border border-[#1D2630]">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-[#F5F7FA] text-xs">Inversión y Criptomonedas Seguras</div>
+                            <div class="text-[#9CA3AF] text-[10px]">Plataforma regulada para diversificar tu cartera de inversión.</div>
+                        </div>
+                    </div>
+                    <button class="btn-lime px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Descubrir</button>
+                </div>
+            </div>
+
+            <!-- GRÁFICO -->
+            <div class="card-main p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-[#F5F7FA]">Curva de Rentabilidad Acumulada</h3>
+                    <span class="text-[10px] font-mono text-[#B6F500] bg-[#B6F500]/10 px-2 py-0.5 rounded">2026</span>
+                </div>
+                <div class="h-56 w-full">
+                    <canvas id="yieldChart"></canvas>
+                </div>
+            </div>
+
+            <!-- HISTORIAL COMPLETO -->
+            <div class="card-main p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-[#F5F7FA]">Historial Completo</h3>
+                    <button id="btn-clear-history" onclick="clearAllHistory()" class="hidden bg-[#EF4444]/10 text-[#EF4444] text-[11px] font-bold px-2.5 py-1 rounded">
+                        Vaciar
+                    </button>
+                </div>
+                <div id="history-container" class="space-y-2.5">
+                    <!-- JS inyecta historial -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- FOOTER CON ANUNCIO GOOGLE ADSENSE 6 -->
+    <footer class="bg-[#151B23] border-t border-[#1D2630] py-8 mt-8 space-y-6">
+        
+        <!-- ANUNCIO GOOGLE ADSENSE 6 (FOOTER BANNER) -->
+        <div class="max-w-[1400px] mx-auto px-4">
+            <div class="card-sub p-3 border border-dashed border-[#B6F500]/30 text-center">
+                <div class="text-[9px] text-[#9CA3AF] uppercase tracking-widest mb-1">Google AdSense (Footer Banner Leaderboard)</div>
+                <div class="text-xs text-white font-semibold">¿Buscas un crédito rápido para autónomos y pymes? <a href="#" class="text-[#B6F500] underline ml-1">Consulta condiciones aquí</a></div>
+            </div>
+        </div>
+
+        <div class="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#9CA3AF]">
+            <div class="font-display font-bold text-[#F5F7FA] lowercase">
+                cuotabrava<span class="text-[#B6F500]">.</span> © 2026
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+                <a href="#" class="hover:text-white">Aviso Legal</a>
+                <a href="#" class="hover:text-white">Privacidad</a>
+                <button onclick="openAdminModal()" class="text-[#9CA3AF] hover:text-[#B6F500] font-mono">Administración</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL ADMIN -->
+    <div id="adminModal" class="fixed inset-0 bg-[#0B0F14]/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="card-main max-w-sm w-full p-6 relative">
+            <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-[#9CA3AF] hover:text-white">✕</button>
+            <h3 class="text-base font-bold text-[#F5F7FA] mb-1">Administración</h3>
+            <p class="text-xs text-[#9CA3AF] mb-4">Introduce la contraseña de acceso.</p>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-3">
+                <input type="password" id="adminPassword" placeholder="Contraseña..." class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-3 text-white text-xs focus:outline-none focus:border-[#B6F500]">
+                <button type="submit" class="w-full btn-lime py-2.5 rounded-xl text-xs">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO PRONÓSTICO -->
+    <div id="createPickModal" class="fixed inset-0 bg-[#0B0F14]/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="card-main max-w-md w-full p-6 relative my-8">
+            <button onclick="closeCreatePickModal()" class="absolute top-4 right-4 text-[#9CA3AF] hover:text-white">✕</button>
+            <h3 class="text-base font-bold text-[#F5F7FA] mb-4">Nuevo Pronóstico</h3>
+            <form onsubmit="saveNewPick(event)" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Deporte</label>
+                        <select id="pickSport" class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                            <option value="futbol">Fútbol</option>
+                            <option value="tenis">Tenis</option>
+                            <option value="baloncesto">Baloncesto</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Competición</label>
+                        <input type="text" id="pickLeague" placeholder="Ej: LaLiga" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Local</label>
+                        <input type="text" id="pickTeam1" placeholder="Ej: Real Madrid" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Visitante</label>
+                        <input type="text" id="pickTeam2" placeholder="Ej: Barcelona" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-[#9CA3AF] font-semibold">Fecha / Día</label>
+                    <input type="text" id="pickTime" placeholder="Ej: Hoy 21:00 o Ayer" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-[#9CA3AF] font-semibold">Pronóstico</label>
+                    <input type="text" id="pickPrediction" placeholder="Ej: Gana Real Madrid" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Cuota</label>
+                        <input type="number" step="0.01" id="pickOdds" placeholder="1.95" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Apuesta (€)</label>
+                        <input type="number" id="pickAmount" placeholder="100" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-[#9CA3AF] font-semibold">Stake (1-10)</label>
+                        <input type="number" min="1" max="10" id="pickStake" placeholder="7" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-[#9CA3AF] font-semibold">Análisis</label>
+                    <textarea id="pickAnalysis" rows="3" placeholder="Motivos..." class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs"></textarea>
+                </div>
+
+                <button type="submit" class="w-full btn-lime py-2.5 rounded-xl text-xs">Publicar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE FUNCIONALIDAD -->
+    <script>
+        // EFECTO TELÓN AL CARGAR
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.classList.add('slide-up');
+                setTimeout(() => splash.remove(), 800);
+            }, 600);
+        });
+
+        let isAdmin = localStorage.getItem('cuotabrava_admin') === 'true';
+        let currentFilter = 'all';
+        let yieldChartInstance = null;
+
+        let picksData = JSON.parse(localStorage.getItem('cuotabrava_picks')) || [
+            {
+                id: 1,
+                sport: 'futbol',
+                league: 'UEFA Champions League',
+                team1: 'Real Madrid',
+                team2: 'Manchester City',
+                time: 'Hoy 21:00',
+                prediction: 'Ambos Equipos Anotan & +2.5 Goles',
+                odds: 1.95,
+                stake: 7,
+                betAmount: 150,
+                status: 'PENDIENTE',
+                analysis: 'Elevado volumen ofensivo esperado en ambos conjuntos.'
+            },
+            {
+                id: 2,
+                sport: 'tenis',
+                league: 'ATP Masters 1000',
+                team1: 'Carlos Alcaraz',
+                team2: 'Jannik Sinner',
+                time: 'Ayer',
+                prediction: 'Ganador Carlos Alcaraz',
+                odds: 2.10,
+                stake: 8,
+                betAmount: 200,
+                status: 'ACERTADO',
+                analysis: 'Sólido rendimiento con el servicio durante el torneo.'
+            },
+            {
+                id: 3,
+                sport: 'baloncesto',
+                league: 'EuroLiga',
+                team1: 'Panathinaikos',
+                team2: 'Olympiacos',
+                time: '02 Nov 2026',
+                prediction: 'Más de 162.5 Puntos',
+                odds: 1.85,
+                stake: 6,
+                betAmount: 100,
+                status: 'FALLADO',
+                analysis: 'Ritmo defensivo trabado en el último cuarto.'
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAdminUI();
+            renderPicks();
+            renderHistory();
+            calculateStats();
+            initChart();
+        });
+
+        function switchTab(tab) {
+            const viewDash = document.getElementById('view-dashboard');
+            const viewAnalytics = document.getElementById('view-analytics');
+            const btnDash = document.getElementById('nav-btn-dashboard');
+            const btnAnalytics = document.getElementById('nav-btn-analytics');
+
+            if (tab === 'dashboard') {
+                viewDash.classList.remove('hidden');
+                viewAnalytics.classList.add('hidden');
+                btnDash.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold transition bg-[#B6F500] text-[#0B0F14]";
+                btnAnalytics.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold text-[#9CA3AF] hover:text-[#F5F7FA] transition";
+            } else {
+                viewDash.classList.add('hidden');
+                viewAnalytics.classList.remove('hidden');
+                btnAnalytics.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold transition bg-[#B6F500] text-[#0B0F14]";
+                btnDash.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold text-[#9CA3AF] hover:text-[#F5F7FA] transition";
+            }
+        }
+
+        function filterSport(sport) {
+            currentFilter = sport;
+            ['all', 'futbol', 'tenis', 'baloncesto'].forEach(s => {
+                const btn = document.getElementById(`cat-${s}`);
+                if (btn) {
+                    if (s === sport) {
+                        btn.className = "pill-category active px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2";
+                    } else {
+                        btn.className = "pill-category text-[#F5F7FA] px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-2";
+                    }
+                }
+            });
+            renderPicks();
+        }
+
+        function renderPicks() {
+            const container = document.getElementById('picks-container');
+            container.innerHTML = '';
+
+            const filtered = picksData.filter(p => currentFilter === 'all' || p.sport === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="card-main p-6 text-center text-[#9CA3AF] text-xs">No hay pronósticos.</div>';
+                return;
+            }
+
+            filtered.forEach(pick => {
+                let badgeClass = 'text-[#FACC15] bg-[#FACC15]/10 border-[#FACC15]/20';
+                if (pick.status === 'ACERTADO') badgeClass = 'text-[#22C55E] bg-[#22C55E]/10 border-[#22C55E]/20';
+                if (pick.status === 'FALLADO') badgeClass = 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/20';
+
+                const html = `
+                <article class="card-main p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs text-[#9CA3AF] border-b border-[#1D2630] pb-2">
+                        <span class="font-semibold text-[#F5F7FA]">${pick.league}</span>
+                        <span class="${badgeClass} border px-2 py-0.5 rounded font-bold text-[10px] uppercase">${pick.status}</span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm sm:text-base font-bold text-white py-0.5">
+                        <span class="flex-1 truncate">${pick.team1}</span>
+                        <span class="text-[11px] font-mono text-[#9CA3AF] bg-[#0B0F14] px-2.5 py-1 rounded border border-[#1D2630] mx-2">${pick.time}</span>
+                        <span class="flex-1 text-right truncate">${pick.team2}</span>
+                    </div>
+
+                    <div class="card-sub p-3 flex items-center justify-between border border-[#1D2630]">
+                        <div>
+                            <span class="text-[9px] text-[#9CA3AF] uppercase font-semibold block">Pronóstico</span>
+                            <span class="font-bold text-[#B6F500] text-xs sm:text-sm">${pick.prediction}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] text-[#9CA3AF] uppercase font-semibold block">Cuota</span>
+                            <span class="font-bold text-[#F5F7FA] text-base font-mono">${pick.odds.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[#9CA3AF] text-xs">
+                        <span>Apostado: <strong class="text-white font-mono">${pick.betAmount} €</strong></span>
+                        <button onclick="toggleAnalysis('analysis-${pick.id}')" class="text-[#B6F500] hover:underline text-xs font-semibold">Análisis ▾</button>
+                    </div>
+
+                    <div id="analysis-${pick.id}" class="hidden mt-2 pt-2 border-t border-[#1D2630] text-[#9CA3AF] text-xs leading-relaxed">
+                        ${pick.analysis}
+                    </div>
+
+                    ${isAdmin ? `
+                    <div class="mt-2 pt-2 border-t border-[#1D2630] flex items-center justify-between text-xs bg-[#0B0F14] p-2 rounded-xl">
+                        <span class="text-[#B6F500] font-bold">Admin:</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="changePickStatus(${pick.id}, 'ACERTADO')" class="bg-[#22C55E]/20 text-[#22C55E] font-bold px-2 py-0.5 rounded text-[11px]">Acertado</button>
+                            <button onclick="changePickStatus(${pick.id}, 'FALLADO')" class="bg-[#EF4444]/20 text-[#EF4444] font-bold px-2 py-0.5 rounded text-[11px]">Fallado</button>
+                            <button onclick="deletePick(${pick.id})" class="bg-[#1D2630] text-[#9CA3AF] hover:text-white px-2 py-0.5 rounded text-[11px]"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </article>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+
+            picksData.forEach(pick => {
+                let statusColor = pick.status === 'ACERTADO' ? 'text-[#22C55E]' : (pick.status === 'FALLADO' ? 'text-[#EF4444]' : 'text-[#FACC15]');
+                const html = `
+                <div class="bg-[#0B0F14] border border-[#1D2630] rounded-xl p-3 flex items-center justify-between gap-2 text-xs">
+                    <div class="truncate">
+                        <div class="text-[#9CA3AF] text-[10px]">${pick.time} • ${pick.league}</div>
+                        <div class="font-bold text-[#F5F7FA] truncate">${pick.team1} vs ${pick.team2}</div>
+                        <div class="text-[#9CA3AF] text-[11px]">Apuesta: <span class="text-[#B6F500]">${pick.prediction}</span></div>
+                    </div>
+                    <div class="text-right font-mono flex-shrink-0">
+                        <div class="text-[#F5F7FA] font-bold">${pick.betAmount} €</div>
+                        <div class="${statusColor} font-bold text-[10px]">${pick.status}</div>
+                    </div>
+                </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function toggleAnalysis(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function calculateStats() {
+            const resolved = picksData.filter(p => p.status === 'ACERTADO' || p.status === 'FALLADO');
+            const totalPicks = picksData.length;
+            const wins = picksData.filter(p => p.status === 'ACERTADO').length;
+            const losses = picksData.filter(p => p.status === 'FALLADO').length;
+
+            document.getElementById('dash-total-picks').innerText = totalPicks;
+            document.getElementById('dash-wins-count').innerText = wins;
+            document.getElementById('dash-losses-count').innerText = losses;
+
+            if (resolved.length === 0) return;
+
+            const winRate = ((wins / resolved.length) * 100).toFixed(1);
+
+            let totalBet = 0;
+            let netProfit = 0;
+            let oddsSum = 0;
+
+            resolved.forEach(p => {
+                const bet = p.betAmount || 100;
+                totalBet += bet;
+                oddsSum += p.odds;
+                if (p.status === 'ACERTADO') netProfit += (bet * p.odds) - bet;
+                if (p.status === 'FALLADO') netProfit -= bet;
+            });
+
+            const yieldVal = totalBet > 0 ? ((netProfit / totalBet) * 100).toFixed(1) : 0;
+            const avgOdds = (oddsSum / resolved.length).toFixed(2);
+            const profitStr = (netProfit >= 0 ? '+' : '') + netProfit.toFixed(0) + ' €';
+
+            document.getElementById('dash-profit-val').innerText = profitStr;
+            document.querySelectorAll('#stat-yield').forEach(el => el.innerText = (yieldVal >= 0 ? '+' : '') + yieldVal + '%');
+            document.querySelectorAll('#stat-winrate').forEach(el => el.innerText = winRate + '%');
+            document.querySelectorAll('#stat-profit').forEach(el => el.innerText = profitStr);
+            document.querySelectorAll('#stat-avgodds').forEach(el => el.innerText = avgOdds);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('yieldChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+            gradient.addColorStop(0, 'rgba(182, 245, 0, 0.3)');
+            gradient.addColorStop(1, 'rgba(182, 245, 0, 0)');
+
+            yieldChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'],
+                    datasets: [{
+                        label: 'Beneficio Acumulado',
+                        data: [0, 320, 540, 480, 1120, 1840],
+                        borderColor: '#B6F500',
+                        borderWidth: 2.5,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#22C55E'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#9CA3AF' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#9CA3AF' } }
+                    }
+                }
+            });
+        }
+
+        function openAdminModal() { document.getElementById('adminModal').classList.remove('hidden'); }
+        function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
+        function openCreatePickModal() { document.getElementById('createPickModal').classList.remove('hidden'); }
+        function closeCreatePickModal() { document.getElementById('createPickModal').classList.add('hidden'); }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const pwd = document.getElementById('adminPassword').value;
+            if (pwd === 'admin123') {
+                isAdmin = true;
+                localStorage.setItem('cuotabrava_admin', 'true');
+                updateAdminUI();
+                renderPicks();
+                renderHistory();
+                closeAdminModal();
+            } else {
+                alert('Contraseña incorrecta');
+            }
+        }
+
+        function logoutAdmin() {
+            isAdmin = false;
+            localStorage.setItem('cuotabrava_admin', 'false');
+            updateAdminUI();
+            renderPicks();
+            renderHistory();
+        }
+
+        function updateAdminUI() {
+            const btn = document.getElementById('btn-create-pick');
+            const bar = document.getElementById('admin-session-bar');
+            const btnClear = document.getElementById('btn-clear-history');
+            if (isAdmin) {
+                btn?.classList.remove('hidden');
+                bar?.classList.remove('hidden');
+                btnClear?.classList.remove('hidden');
+            } else {
+                btn?.classList.add('hidden');
+                bar?.classList.add('hidden');
+                btnClear?.classList.add('hidden');
+            }
+        }
+
+        function changePickStatus(id, newStatus) {
+            const pick = picksData.find(p => p.id === id);
+            if (pick) {
+                pick.status = newStatus;
+                savePicks();
+                renderPicks();
+                renderHistory();
+                calculateStats();
+            }
+        }
+
+        function deletePick(id) {
+            if (confirm('¿Eliminar pronóstico?')) {
+                picksData = picksData.filter(p => p.id !== id);
+                savePicks();
+                renderPicks();
+                renderHistory();
+                calculateStats();
+            }
+        }
+
+        function clearAllHistory() {
+            if (confirm('¿Vaciar todo el historial?')) {
+                picksData = [];
+                savePicks();
+                renderPicks();
+                renderHistory();
+                calculateStats();
+            }
+        }
+
+        function saveNewPick(e) {
+            e.preventDefault();
+            const newPick = {
+                id: Date.now(),
+                sport: document.getElementById('pickSport').value,
+                league: document.getElementById('pickLeague').value,
+                team1: document.getElementById('pickTeam1').value,
+                team2: document.getElementById('pickTeam2').value,
+                time: document.getElementById('pickTime').value,
+                prediction: document.getElementById('pickPrediction').value,
+                odds: parseFloat(document.getElementById('pickOdds').value),
+                betAmount: parseFloat(document.getElementById('pickAmount').value),
+                stake: parseInt(document.getElementById('pickStake').value),
+                status: 'PENDIENTE',
+                analysis: document.getElementById('pickAnalysis').value || 'Sin análisis adicional.'
+            };
+            picksData.unshift(newPick);
+            savePicks();
+            renderPicks();
+            renderHistory();
+            calculateStats();
+            closeCreatePickModal();
+        }
+
+        function savePicks() {
+            localStorage.setItem('cuotabrava_picks', JSON.stringify(picksData));
+        }
+    </script>
+</body>
+</html>
