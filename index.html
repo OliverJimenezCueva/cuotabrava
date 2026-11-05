@@ -10,6 +10,7 @@
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_ES">
     <meta property="og:site_name" content="cuotabrava">
+    <meta name="build" content="2026-11-05-historial-v2">
     <meta property="og:title" content="cuotabrava | pronósticos de fútbol, tenis y baloncesto">
     <meta property="og:description" content="Pronósticos con historial público y estadísticas calculadas automáticamente. Solo mayores de 18 años.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
@@ -462,8 +463,11 @@
                 </div>
 
                 <div>
-                    <label class="text-[11px] text-[#9CA3AF] font-semibold">Fecha / Día</label>
-                    <input type="text" id="pickTime" placeholder="Ej: Hoy 21:00" required class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    <label class="text-[11px] text-[#9CA3AF] font-semibold">Fecha y hora del partido</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="pickDate" required style="color-scheme:dark" class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                        <input type="time" id="pickHour" required style="color-scheme:dark" class="w-full bg-[#0B0F14] border border-[#1D2630] rounded-xl p-2.5 text-white text-xs">
+                    </div>
                 </div>
 
                 <div>
@@ -599,19 +603,27 @@
                 picksData = [];
                 loadError = true;
             } else {
-                try {
-                    const { data, error } = await _supabase
-                        .from('picks')
-                        .select('*')
-                        .order('created_at', { ascending: false });
+                // Hasta 3 intentos: un fallo de red puntual no debe dejar la web vacía
+                let lastErr = null;
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        const { data, error } = await _supabase
+                            .from('picks')
+                            .select('*')
+                            .order('created_at', { ascending: false });
 
-                    if (error) throw error;
-                    picksData = data || [];
-                    loadError = false;
-                } catch (err) {
-                    console.error("Error al obtener los pronósticos:", err.message);
-                    loadError = picksData.length === 0; // si ya había datos cargados, se conservan
+                        if (error) throw error;
+                        picksData = data || [];
+                        loadError = false;
+                        lastErr = null;
+                        break;
+                    } catch (err) {
+                        lastErr = err;
+                        console.error('Error al obtener los pronósticos (intento ' + attempt + ' de 3):', err.message);
+                        if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+                    }
                 }
+                if (lastErr) loadError = picksData.length === 0; // si ya había datos cargados, se conservan
             }
             renderPicks();
             renderHistory();
@@ -643,14 +655,58 @@
             return (pick.status || 'PENDIENTE') === 'PENDIENTE';
         }
 
-        function whenLabel(pick) {
-            // "Hoy 21:00" deja de ser cierto al día siguiente: en el historial se sustituye por la fecha real
-            const txt = pick.time || 'Reciente';
-            const m = txt.match(/^\s*(hoy|mañana)\b\s*(.*)$/i);
-            if (!m) return txt;
+        function longDate(key) {
+            const [y, m, d] = key.split('-').map(Number);
+            const txt = new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+            return String(y) === dayKey(new Date()).slice(0, 4) ? txt : txt + ' de ' + y;
+        }
+
+        // Fecha y hora del partido. Formato nuevo: "AAAA-MM-DD HH:MM". Los pronósticos antiguos escritos
+        // a mano ("Hoy 21:00", "Sábado 18:30", "12/10 21:00") se interpretan a partir de su fecha de creación.
+        function parseWhen(pick) {
+            const txt = String(pick.time || '').trim();
+            let m = txt.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/);
+            if (m) return { key: m[1] + '-' + m[2] + '-' + m[3], time: m[4] ? m[4].padStart(2, '0') + ':' + m[5] : '' };
+
+            const t = txt.match(/(\d{1,2})\s*[:.hH]\s*(\d{2})/);
+            const time = t ? t[1].padStart(2, '0') + ':' + t[2] : '';
             const base = pickDay(pick);
-            const key = m[1].toLowerCase() === 'hoy' ? base : shiftKey(base, 1);
-            return (prettyDay(key) + ' ' + m[2]).trim();
+            const low = txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            let key = base;
+
+            const dm = low.match(/\b(\d{1,2})[\/-](\d{1,2})\b/);
+            if (dm) {
+                key = base.slice(0, 4) + '-' + dm[2].padStart(2, '0') + '-' + dm[1].padStart(2, '0');
+            } else if (/\bmanana\b/.test(low)) {
+                key = shiftKey(base, 1);
+            } else if (!/\bhoy\b/.test(low)) {
+                const w = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'].findIndex(d => new RegExp('\\b' + d).test(low));
+                if (w >= 0) {
+                    const baseDow = new Date(base + 'T12:00:00Z').getUTCDay();
+                    key = shiftKey(base, (w - baseDow + 7) % 7);
+                }
+            }
+            return { key, time };
+        }
+
+        // Historial: "12 de octubre · 21:00"
+        function whenLabel(pick) {
+            const w = parseWhen(pick);
+            return longDate(w.key) + (w.time ? ' · ' + w.time : '');
+        }
+
+        // Tarjetas: "Hoy 21:00", "Mañana 18:30" o "12 oct 21:00"
+        function whenShort(pick) {
+            const w = parseWhen(pick);
+            const todayKey = dayKey(new Date());
+            let day;
+            if (w.key === todayKey) day = 'Hoy';
+            else if (w.key === shiftKey(todayKey, 1)) day = 'Mañana';
+            else {
+                const [y, mo, d] = w.key.split('-').map(Number);
+                day = new Date(Date.UTC(y, mo - 1, d, 12)).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', '');
+            }
+            return day + (w.time ? ' ' + w.time : '');
         }
 
         // Si la página se queda abierta al pasar la medianoche, los de ayer salen solos de la principal
@@ -720,7 +776,7 @@
             renderFeatured();
 
             if (loadError) {
-                container.innerHTML = '<div class="card-main p-6 text-center text-[#9CA3AF] text-xs">No se han podido cargar los pronósticos. Inténtalo de nuevo en unos minutos.</div>';
+                container.innerHTML = '<div class="card-main p-6 text-center text-[#9CA3AF] text-xs">No se han podido cargar los pronósticos. <button onclick="fetchPicks()" class="text-[#B6F500] font-semibold underline cursor-pointer">Reintentar</button></div>';
                 return;
             }
 
@@ -748,7 +804,7 @@
 
                     <div class="flex items-center justify-between text-sm sm:text-base font-bold text-white py-0.5">
                         <span class="flex-1 truncate">${esc(pick.team1)}</span>
-                        <span class="text-[11px] font-mono text-[#9CA3AF] bg-[#0B0F14] px-2.5 py-1 rounded border border-[#1D2630] mx-2">${esc(isToday(pick) ? (pick.time || 'Reciente') : whenLabel(pick))}</span>
+                        <span class="text-[11px] font-mono text-[#9CA3AF] bg-[#0B0F14] px-2.5 py-1 rounded border border-[#1D2630] mx-2">${esc(whenShort(pick))}</span>
                         <span class="flex-1 text-right truncate">${esc(pick.team2)}</span>
                     </div>
 
@@ -794,22 +850,33 @@
             container.innerHTML = '';
 
             if (picksData.length === 0) {
-                container.innerHTML = '<p class="text-center text-[#9CA3AF] text-xs py-4">' + (loadError ? 'No se ha podido cargar el historial.' : 'Todavía no hay pronósticos en el historial.') + '</p>';
+                container.innerHTML = '<p class="text-center text-[#9CA3AF] text-xs py-4">' + (loadError ? 'No se ha podido cargar el historial. <button onclick="fetchPicks()" class="text-[#B6F500] font-semibold underline cursor-pointer">Reintentar</button>' : 'Todavía no hay pronósticos en el historial.') + '</p>';
                 return;
             }
 
             picksData.forEach(pick => {
                 let statusColor = pick.status === 'ACERTADO' ? 'text-[#22C55E]' : (pick.status === 'FALLADO' ? 'text-[#EF4444]' : 'text-[#FACC15]');
+                const bet = parseFloat(pick.betAmount || 100);
+                const odds = parseFloat(pick.odds || 0);
+                let result = '<span class="text-[#9CA3AF]">—</span>';
+                if (pick.status === 'ACERTADO') result = '<span class="text-[#22C55E]">+' + (bet * odds - bet).toFixed(2) + ' €</span>';
+                else if (pick.status === 'FALLADO') result = '<span class="text-[#EF4444]">-' + bet.toFixed(2) + ' €</span>';
+
                 const html = `
-                <div class="bg-[#0B0F14] border border-[#1D2630] rounded-xl p-3 flex items-center justify-between gap-2 text-xs">
-                    <div class="truncate">
+                <div class="bg-[#0B0F14] border border-[#1D2630] rounded-xl p-3 flex items-start justify-between gap-3 text-xs">
+                    <div class="min-w-0">
                         <div class="text-[#9CA3AF] text-[10px]">${esc(whenLabel(pick))} • ${esc(pick.league || '')}</div>
-                        <div class="font-bold text-[#F5F7FA] truncate">${esc(pick.team1)} vs ${esc(pick.team2)}</div>
-                        <div class="text-[#9CA3AF] text-[11px]">Apuesta: <span class="text-[#B6F500]">${esc(pick.prediction)}</span></div>
+                        <div class="font-bold text-[#F5F7FA]">${esc(pick.team1)} vs ${esc(pick.team2)}</div>
+                        <div class="text-[#9CA3AF] text-[11px]">Pronóstico: <span class="text-[#B6F500]">${esc(pick.prediction)}</span></div>
+                        <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] font-mono text-[#9CA3AF]">
+                            <span>Cuota <b class="text-[#F5F7FA]">${odds ? odds.toFixed(2) : '-'}</b></span>
+                            <span>Stake <b class="text-[#F5F7FA]">${esc(pick.stake || '-')}/10</b></span>
+                            <span>Apostado <b class="text-[#F5F7FA]">${bet.toFixed(2)} €</b></span>
+                        </div>
                     </div>
                     <div class="text-right font-mono flex-shrink-0">
-                        <div class="text-[#F5F7FA] font-bold">${esc(pick.betAmount || 100)} €</div>
                         <div class="${statusColor} font-bold text-[10px]">${esc(pick.status || 'PENDIENTE')}</div>
+                        <div class="font-bold text-sm mt-0.5">${result}</div>
                         ${currentUser ? `
                         <div class="flex items-center justify-end gap-1 mt-1.5">
                             <button onclick="updatePickStatus('${pick.id}', 'ACERTADO')" class="bg-[#22C55E]/20 text-[#22C55E] font-bold px-1.5 py-0.5 rounded text-[10px] cursor-pointer">✓</button>
@@ -977,7 +1044,7 @@
                 league: document.getElementById('pickLeague').value,
                 team1: document.getElementById('pickTeam1').value,
                 team2: document.getElementById('pickTeam2').value,
-                time: document.getElementById('pickTime').value,
+                time: document.getElementById('pickDate').value + ' ' + document.getElementById('pickHour').value,
                 prediction: document.getElementById('pickPrediction').value,
                 odds: parseFloat(document.getElementById('pickOdds').value),
                 betAmount: parseFloat(document.getElementById('pickAmount').value),
@@ -1079,7 +1146,11 @@
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openCreatePickModal() { document.getElementById('createPickModal').style.display = 'flex'; }
+        function openCreatePickModal() {
+            const d = document.getElementById('pickDate');
+            if (d && !d.value) d.value = dayKey(new Date());
+            document.getElementById('createPickModal').style.display = 'flex';
+        }
         function closeCreatePickModal() { document.getElementById('createPickModal').style.display = 'none'; }
     </script>
 </body>
