@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://TU-DOMINIO/</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://TU-DOMINIO/sobre-nosotros.html</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://TU-DOMINIO/contacto.html</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://TU-DOMINIO/aviso-legal.html</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://TU-DOMINIO/privacidad.html</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://TU-DOMINIO/cookies.html</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/guias</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/como-leer-las-cuotas</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/que-es-el-yield</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/gestion-del-bankroll</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/que-es-el-stake</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/como-valorar-a-un-tipster</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/sobre-nosotros</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/contacto</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/aviso-legal</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/privacidad</loc><lastmod>2026-11-05</lastmod></url>
+  <url><loc>https://cuotabrava.netlify.app/cookies</loc><lastmod>2026-11-05</lastmod></url>
 </urlset>
