@@ -1,9 +1,0 @@
-# cuotabrava. - Versión Optimizada con Mayor Densidad de Anuncios
-
-## Cambios aplicados para maximizar ingresos:
-1. **Banner Superior (AdSense Leaderboard)**: Integrado justo debajo de la barra de navegación principal.
-2. **Banner Lateral Izquierdo (AdSense Box 300x250)**: Ubicado debajo del bloque de balance neto.
-3. **Banner Nativo en el Feed (AdSense In-Feed Ad)**: Insertado de forma natural a mitad del listado de pronósticos.
-4. **Banner Lateral Derecho (AdSense Medium Rectangle)**: Colocado entre la tarjeta de Telegram y el aviso de juego responsable.
-5. **Banner en Sección Analytics**: Espacio publicitario adicional cuando el usuario revisa los gráficos y el historial de rendimiento.
-6. **Banner de Pie de Página (Footer Leaderboard)**: Bloque publicitario final antes del cierre de la página.
