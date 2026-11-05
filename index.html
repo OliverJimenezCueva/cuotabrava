@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cuotabrava | pronósticos & analytics</title>
     <meta name="description" content="Pronósticos deportivos de fútbol, tenis y baloncesto con historial público, yield y beneficio calculados automáticamente. Solo mayores de 18 años.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:site_name" content="cuotabrava">
+    <meta property="og:title" content="cuotabrava | pronósticos de fútbol, tenis y baloncesto">
+    <meta property="og:description" content="Pronósticos con historial público y estadísticas calculadas automáticamente. Solo mayores de 18 años.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
     <!-- 1. Configuración de Tailwind -->
@@ -289,7 +294,6 @@
                             <button onclick="logoutAdmin()" class="text-[#9CA3AF] hover:text-white underline">Salir</button>
                         </div>
                         <p class="text-[#9CA3AF]">Modo administración habilitado para gestionar apuestas en la nube.<br>Sesión: <span id="admin-email" class="text-[#F5F7FA] font-mono break-all"></span></p>
-                        <p id="legal-warning" class="hidden text-[#FACC15]">⚠ Faltan tus datos en el bloque LEGAL del código: los textos legales salen incompletos para los visitantes.</p>
                     </div>
 
                     <!-- TELEGRAM -->
@@ -386,9 +390,11 @@
                 cuotabrava<span class="text-[#B6F500]">.</span> © 2026
             </div>
             <div class="flex items-center gap-4 text-xs">
-                <button onclick="openLegal('aviso')" class="hover:text-white cursor-pointer">Aviso Legal</button>
-                <button onclick="openLegal('privacidad')" class="hover:text-white cursor-pointer">Privacidad</button>
-                <button onclick="openLegal('cookies')" class="hover:text-white cursor-pointer">Cookies</button>
+                <a href="sobre-nosotros.html" class="hover:text-white">Sobre nosotros</a>
+                <a href="contacto.html" class="hover:text-white">Contacto</a>
+                <a href="aviso-legal.html" class="hover:text-white">Aviso Legal</a>
+                <a href="privacidad.html" class="hover:text-white">Privacidad</a>
+                <a href="cookies.html" class="hover:text-white">Cookies</a>
                 <button onclick="openModal('modal-login')" class="text-[#9CA3AF] hover:text-[#B6F500] font-mono cursor-pointer">Acceso Admin</button>
             </div>
         </div>
@@ -411,19 +417,10 @@
         </div>
     </div>
 
-    <!-- MODAL TEXTOS LEGALES -->
-    <div class="modal fixed inset-0 bg-black/80 z-[10000] hidden items-center justify-center p-4" id="modal-legal">
-        <div class="bg-[#151B23] border border-[#212830] rounded-2xl max-w-2xl w-full p-6 relative shadow-2xl max-h-[85vh] overflow-y-auto">
-            <button class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold" onclick="closeModal('modal-legal')">&times;</button>
-            <h3 id="legal-title" class="text-[#B6F500] font-bold text-xl mb-4"></h3>
-            <div id="legal-body" class="text-xs text-[#9CA3AF] leading-relaxed space-y-3"></div>
-        </div>
-    </div>
-
     <!-- AVISO INFORMATIVO (sin cookies de seguimiento ni publicidad) -->
     <div id="notice-bar" class="hidden fixed bottom-0 inset-x-0 z-[9000] bg-[#151B23] border-t border-[#1D2630] p-3">
         <div class="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px] text-[#9CA3AF]">
-            <p>Esta web no usa cookies de seguimiento ni de publicidad. Para mostrarse carga archivos de servidores de terceros (tipografías, librerías y base de datos), que reciben tu dirección IP. <button onclick="openLegal('privacidad')" class="text-[#B6F500] underline cursor-pointer">Más información</button></p>
+            <p>Esta web no usa cookies de seguimiento ni de publicidad. Para mostrarse carga archivos de servidores de terceros (tipografías, librerías y base de datos), que reciben tu dirección IP. <a href="privacidad.html" class="text-[#B6F500] underline">Más información</a></p>
             <button onclick="acceptNotice()" class="btn-lime px-4 py-1.5 rounded-lg text-xs whitespace-nowrap cursor-pointer">Entendido</button>
         </div>
     </div>
@@ -508,18 +505,18 @@
         let yieldChartInstance = null;
 
         if (SUPABASE_URL && window.supabase) {
-            _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // Algunos entornos (vistas previas, extensiones) interceptan fetch y no pueden copiar un objeto
+            // Headers (DataCloneError). Se convierte a objeto simple antes de enviar la petición.
+            const safeFetch = (input, init) => {
+                if (init && typeof Headers !== 'undefined' && init.headers instanceof Headers) {
+                    init = { ...init, headers: Object.fromEntries(init.headers.entries()) };
+                }
+                return fetch(input, init);
+            };
+            _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: safeFetch } });
         }
 
         let loadError = false;
-
-        // ====== DATOS LEGALES: RELLÉNALOS ANTES DE PUBLICAR ======
-        const LEGAL = {
-            titular: 'Oliver Jiménez',     // Nombre y apellidos o razón social
-            nif: '74385761N',         // NIF/NIE/CIF
-            domicilio: 'Calle Panades 28, 4 4',   // Dirección postal
-            email: 'oojimenezcc@gmail.com'        // Correo de contacto
-        };
 
         // Escapa texto antes de pintarlo con innerHTML (evita inyectar HTML/JS desde la base de datos)
         function esc(v) {
@@ -961,8 +958,6 @@
             document.querySelectorAll('.ad-slot').forEach(el => el.classList.toggle('hidden', !currentUser));
             const ae = document.getElementById('admin-email');
             if (ae) ae.textContent = currentUser ? (currentUser.email || '') : '';
-            const legalOk = !!(LEGAL.titular && LEGAL.nif && LEGAL.domicilio && LEGAL.email);
-            document.getElementById('legal-warning')?.classList.toggle('hidden', legalOk);
             renderHistory();
         }
 
@@ -1065,44 +1060,6 @@
             } catch (err) {
                 alert("No se pudo eliminar: " + err.message);
             }
-        }
-
-        function legalHTML(kind) {
-            const L = k => esc(LEGAL[k] || '[pendiente de completar]');
-            const p = t => '<p>' + t + '</p>';
-            const h = t => '<h4 class="text-[#F5F7FA] font-bold pt-1">' + t + '</h4>';
-            if (kind === 'aviso') {
-                return h('Titular del sitio') +
-                    p('Titular: ' + L('titular') + ' · NIF: ' + L('nif') + '<br>Domicilio: ' + L('domicilio') + '<br>Contacto: ' + L('email')) +
-                    h('Objeto') +
-                    p('cuotabrava es una web informativa de pronósticos deportivos. Los pronósticos son opiniones personales: no constituyen asesoramiento ni garantizan beneficios, y los resultados pasados no aseguran resultados futuros.') +
-                    h('Juego responsable') +
-                    p('Contenido dirigido exclusivamente a mayores de 18 años. Apostar conlleva riesgo de perder dinero: apuesta solo lo que puedas permitirte perder y, si crees que tienes un problema con el juego, busca ayuda profesional.') +
-                    h('Propiedad intelectual y enlaces') +
-                    p('Los contenidos y el diseño pertenecen al titular. Los enlaces a sitios de terceros (por ejemplo Telegram) se ofrecen como referencia y el titular no responde de su contenido.') +
-                    h('Legislación') +
-                    p('Este sitio se rige por la legislación española.');
-            }
-            if (kind === 'privacidad') {
-                return h('Responsable del tratamiento') +
-                    p(L('titular') + ' (NIF ' + L('nif') + '), ' + L('domicilio') + '. Contacto: ' + L('email')) +
-                    h('Qué datos se tratan') +
-                    p('La web no tiene registro ni formularios para visitantes. Al visitarla, los servicios de terceros necesarios para mostrarla reciben tu dirección IP y datos técnicos del navegador: Supabase (base de datos de pronósticos), jsDelivr, cdnjs y Tailwind (librerías) y Google Fonts (tipografías). Si te unes al canal de Telegram, se aplica la política de privacidad de Telegram.') +
-                    h('Finalidad y base jurídica') +
-                    p('Mostrar el sitio y mantener su seguridad y funcionamiento (interés legítimo, art. 6.1.f RGPD).') +
-                    h('Tus derechos') +
-                    p('Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a ' + L('email') + '. Si consideras que no se han atendido, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).');
-            }
-            return h('Cookies y almacenamiento local') +
-                p('Esta web no instala cookies de seguimiento, analítica ni publicidad. Solo usa almacenamiento local del navegador para recordar que has leído el aviso informativo y, en el caso del administrador, para mantener la sesión.') +
-                p('Si en el futuro se activa publicidad (por ejemplo Google AdSense), se pedirá tu consentimiento antes de instalar cualquier cookie no necesaria.');
-        }
-
-        function openLegal(kind) {
-            const titles = { aviso: 'Aviso legal', privacidad: 'Política de privacidad', cookies: 'Política de cookies' };
-            document.getElementById('legal-title').textContent = titles[kind] || '';
-            document.getElementById('legal-body').innerHTML = legalHTML(kind);
-            openModal('modal-legal');
         }
 
         function showNoticeIfNeeded() {
